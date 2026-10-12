@@ -9,7 +9,8 @@
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
 .app { height: 100vh; display: flex; flex-direction: column; }
 .app.phase-break { --accent: #4f6590; --sel: #e4e9f4; }
-.titlebar { -webkit-app-region: drag; display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px 84px; }
+.titlebar { -webkit-app-region: drag; display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+.mac .titlebar { padding-left: 84px; }
 .titlebar button { -webkit-app-region: no-drag; margin-left: auto; }
 .brand { font-weight: 600; }
 .chip { background: var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }

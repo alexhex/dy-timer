@@ -13,6 +13,9 @@ npm install
 npm run dev        # development
 npm test           # log/week parsing tests
 npm run dist:mac   # build dmg
+npm run dist:win   # build Windows installer (run on Windows)
 ```
+
+See [INSTALL.md](INSTALL.md) for step-by-step setup on macOS and Windows 11.
 
 Vault paths default to `/Users/neil/own_kits/mac-notes-obsidian` and can be changed under 设置. The previous Notion-based version is in `_legacy/`.

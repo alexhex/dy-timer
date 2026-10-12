@@ -9,4 +9,6 @@ declare global {
   }
 }
 
+if (navigator.userAgent.includes('Mac')) document.documentElement.classList.add('mac')
+
 createRoot(document.getElementById('root')!).render(<App />)
