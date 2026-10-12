@@ -1,0 +1,44 @@
+{
+  "name": "dy-timer",
+  "version": "1.0.0",
+  "description": "Obsidian-integrated focus timer (count-up focus, count-down break)",
+  "main": "out/main/index.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "dist:mac": "electron-vite build && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^5.0.4",
+    "yaml": "^2.9.1"
+  },
+  "build": {
+    "appId": "com.neil.dytimer",
+    "productName": "Dynamic Timer",
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    }
+  }
+}
