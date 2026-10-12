@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { upsertDayBlock, BLOCK_START } from './log'
 import { isoWeekKey, dayHeading } from './week'
-import { isThisWeekOpen } from './vault'
+import { isDoing } from './vault'
 import type { Session } from '../shared/types'
 
 const at = (h: number, m: number) => new Date(2026, 9, 12, h, m).getTime()
@@ -48,11 +48,13 @@ describe('upsertDayBlock', () => {
   })
 })
 
-describe('isThisWeekOpen', () => {
-  it('follows the dataview rule', () => {
-    expect(isThisWeekOpen({ alert_date: '2026-10-13', status: ['1 - Doing'] }, '2026-W42')).toBe(true)
-    expect(isThisWeekOpen({ alert_date: '2026-10-13', status: ['6 - Done'] }, '2026-W42')).toBe(false)
-    expect(isThisWeekOpen({ alert_date: '2026-10-19' }, '2026-W42')).toBe(false)
-    expect(isThisWeekOpen({}, '2026-W42')).toBe(false)
+describe('isDoing', () => {
+  it('matches status 1 - Doing only', () => {
+    expect(isDoing({ status: ['1 - Doing'] })).toBe(true)
+    expect(isDoing({ status: '1 - Doing' })).toBe(true)
+    expect(isDoing({ status: ['1 - Doing', '2 - To Do'] })).toBe(false)
+    expect(isDoing({ status: ['2 - To Do'] })).toBe(false)
+    expect(isDoing({ status: ['6 - Done'] })).toBe(false)
+    expect(isDoing({})).toBe(false)
   })
 })

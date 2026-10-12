@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { parse } from 'yaml'
 import type { Config, Session, WeekTask } from '../shared/types'
 import { newLogFile, upsertDayBlock } from './log'
-import { isoWeekKey, isoWeekKeyOfDateString } from './week'
+import { isoWeekKey } from './week'
 
 export function parseFrontmatter(src: string): Record<string, unknown> {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(src)
@@ -19,14 +19,16 @@ export function parseFrontmatter(src: string): Record<string, unknown> {
 const asText = (v: unknown): string =>
   Array.isArray(v) ? v.filter(Boolean).join(', ') : v == null ? '' : String(v)
 
-/** Same rule as the weekly log's dataview: alert_date in this ISO week and status not Done. */
-export function isThisWeekOpen(fm: Record<string, unknown>, weekKey: string): boolean {
-  const alert = asText(fm.alert_date)
-  if (isoWeekKeyOfDateString(alert) !== weekKey) return false
-  return !asText(fm.status).includes('6 - Done')
+/**
+ * Tasks whose status is "1 - Doing". A status listing several values at once
+ * is a template (e.g. Task Example.md enumerating every option), not a real task.
+ */
+export function isDoing(fm: Record<string, unknown>): boolean {
+  const st = Array.isArray(fm.status) ? fm.status : [fm.status]
+  return st.length === 1 && String(st[0] ?? '').includes('1 - Doing')
 }
 
-export async function listWeekTasks(cfg: Config, now = new Date()) {
+export async function listDoingTasks(cfg: Config, now = new Date()) {
   const weekKey = isoWeekKey(now)
   const dir = join(cfg.vaultPath, cfg.tasksDir)
   const files = (await readdir(dir)).filter((f) => f.endsWith('.md'))
@@ -34,7 +36,7 @@ export async function listWeekTasks(cfg: Config, now = new Date()) {
   await Promise.all(
     files.map(async (f) => {
       const fm = parseFrontmatter(await readFile(join(dir, f), 'utf8'))
-      if (!isThisWeekOpen(fm, weekKey)) return
+      if (!isDoing(fm)) return
       tasks.push({
         name: f.slice(0, -3),
         path: join(dir, f),
@@ -45,12 +47,7 @@ export async function listWeekTasks(cfg: Config, now = new Date()) {
       })
     })
   )
-  tasks.sort(
-    (a, b) =>
-      a.alertDate.localeCompare(b.alertDate) ||
-      a.priority.localeCompare(b.priority) ||
-      a.name.localeCompare(b.name)
-  )
+  tasks.sort((a, b) => a.priority.localeCompare(b.priority) || a.name.localeCompare(b.name))
   return { weekKey, tasks }
 }
 

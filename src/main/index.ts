@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Config, PersistedState } from '../shared/types'
-import { listWeekTasks, syncDay } from './vault'
+import { listDoingTasks, syncDay } from './vault'
 
 const DEFAULT_CONFIG: Config = {
   vaultPath: '/Users/neil/own_kits/mac-notes-obsidian',
@@ -58,9 +58,9 @@ app.whenReady().then(() => {
     await writeJson('config.json', c)
     return getConfig()
   })
-  ipcMain.handle('tasks:week', async () => {
+  ipcMain.handle('tasks:doing', async () => {
     try {
-      return await listWeekTasks(await getConfig())
+      return await listDoingTasks(await getConfig())
     } catch (e) {
       return { weekKey: '', tasks: [], error: (e as Error).message }
     }

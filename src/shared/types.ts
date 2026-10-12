@@ -56,7 +56,7 @@ export interface SyncResult {
 export interface Api {
   getConfig(): Promise<Config>
   setConfig(c: Config): Promise<Config>
-  listWeekTasks(): Promise<{ weekKey: string; tasks: WeekTask[]; error?: string }>
+  listDoingTasks(): Promise<{ weekKey: string; tasks: WeekTask[]; error?: string }>
   loadState(): Promise<PersistedState | null>
   saveState(s: PersistedState): Promise<void>
   /** Rewrite the day block of the weekly log for the day of `ts` */

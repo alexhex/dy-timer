@@ -41,7 +41,7 @@ export function App() {
   ref.current = { timer, sessions }
 
   const loadTasks = useCallback(async () => {
-    const r = await window.api.listWeekTasks()
+    const r = await window.api.listDoingTasks()
     setTasks(r.tasks)
     setWeekKey(r.weekKey)
     setTasksError(r.error ?? '')
@@ -155,11 +155,11 @@ export function App() {
       <main>
         <section className="panel tasks">
           <div className="panel-head">
-            <h2>本周任务</h2>
+            <h2>进行中任务</h2>
             <button className="ghost" onClick={loadTasks} disabled={active === 'focus'}>刷新</button>
           </div>
           {tasksError && <p className="error">无法读取任务：{tasksError}</p>}
-          {!tasksError && tasks.length === 0 && <p className="muted">本周没有未完成的任务（按 alert_date 筛选）。</p>}
+          {!tasksError && tasks.length === 0 && <p className="muted">没有状态为 “1 - Doing” 的任务。</p>}
           <ul className="task-list">
             {tasks.map((t) => (
               <li key={t.path}>
@@ -170,7 +170,7 @@ export function App() {
                 >
                   <span className="task-name">{t.name}</span>
                   <span className="task-meta">
-                    {t.priority.replace(/^\d - /, '')} · {t.status.replace(/^\d - /, '') || '—'} · {t.alertDate.slice(5)}
+                    {t.priority.replace(/^\d - /, '') || '—'}{t.dueDate ? ` · 截止 ${t.dueDate.slice(5)}` : ''}
                   </span>
                 </button>
               </li>

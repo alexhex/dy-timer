@@ -1,6 +1,6 @@
 # 安装指南
 
-本应用从 Obsidian vault 里读取「本周任务」，并把每天每个任务的累计专注时间写回周日志。
+本应用从 Obsidian vault 里读取状态为 `1 - Doing` 的任务，并把每天每个任务的累计专注时间写回周日志。
 可以直接运行源码（推荐，所有平台一致），也可以自己打包成安装包。
 
 ## 前置条件（两个平台通用）
@@ -13,8 +13,7 @@
 
 ### vault 结构
 
-- **任务目录**（默认 `40_Tasks`）：每个任务一个 `.md`，frontmatter 里要有 `alert_date`（如 `2026-10-13`）和 `status`。
-  本周任务 = `alert_date` 落在当前 ISO 周，且 `status` 不含 `6 - Done`。
+- **任务目录**（默认 `40_Tasks`）：每个任务一个 `.md`，frontmatter 里的 `status` 包含 `1 - Doing` 即会出现在任务列表中（可选 `priority`、`due_date` 用于排序和显示）。
 - **日志目录**（默认 `70_Logs`）：周日志文件名为 `2026-W42.md` 这种 ISO 周格式，文件不存在时会自动创建。
 - 写入位置：日志里对应日期的 `## 12-Oct-2026` 小节末尾，位于 `<!-- dy-timer:start -->` 和 `<!-- dy-timer:end -->` 之间；这两行之外的内容不会被改动。
 
@@ -158,9 +157,9 @@ $env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"; node node_module
 **`npm install` 报 peer dependency 冲突**
 请使用仓库自带的 `package-lock.json`，不要手动升级 vite；`electron-vite` 目前要求 vite ≤ 7。
 
-**本周任务列表是空的**
+**任务列表是空的**
 - 检查「设置」里的 vault 路径和任务目录是否正确；界面上若显示「无法读取任务」，后面会带具体错误。
-- 确认任务笔记的 frontmatter 有 `alert_date: YYYY-MM-DD`，并且在本周内、状态不是 `6 - Done`。
+- 确认至少有一个任务笔记的 frontmatter `status` 里包含 `1 - Doing`。
 
 **日志没有写入**
 结束一轮专注时才会写入，且当天某个任务累计不足 1 分钟不会写入。窗口下方会显示写入的文件路径或错误信息；也可以点「今日」面板里的「重新写入今日日志」。
