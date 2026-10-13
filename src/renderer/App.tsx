@@ -107,6 +107,19 @@ export function App() {
     syncLog(startedAt)
   }, [syncLog])
 
+  /** Ends the break (running or paused) and goes straight into the next focus. */
+  const finishBreak = useCallback(
+    (cur: TimerState) => {
+      const idle = endBreak(cur)
+      const started = doStart(idle)
+      // Continue straight into the next focus; if that fails, release the lock.
+      const next = started ?? { ...idle, taskLocked: false }
+      ref.current = { ...ref.current, timer: next }
+      setTimer(next)
+    },
+    [doStart]
+  )
+
   useEffect(() => {
     const id = setInterval(() => {
       const t = Date.now()
@@ -114,14 +127,11 @@ export function App() {
       const cur = ref.current.timer
       if (cur.phase === 'break' && cur.breakDurationMs > 0 && elapsedMs(cur, t) >= cur.breakDurationMs) {
         ding()
-        const idle = endBreak(cur)
-        const started = doStart(idle)
-        // Continue straight into the next focus; if that fails, release the lock.
-        setTimer(started ?? { ...idle, taskLocked: false })
+        finishBreak(cur)
       }
     }, 250)
     return () => clearInterval(id)
-  }, [doStart])
+  }, [finishBreak])
 
   const active = activePhase(timer)
   const elapsed = elapsedMs(timer, now)
@@ -206,16 +216,16 @@ export function App() {
           <div className="controls">
             <button
               className="primary"
-              disabled={active === 'break'}
               onClick={() => {
                 if (active === 'focus') doStop()
+                else if (active === 'break') finishBreak(ref.current.timer)
                 else if (active === 'idle') {
                   const s = doStart(timer)
                   if (s) setTimer(s)
                 }
               }}
             >
-              {active === 'focus' ? '结束专注' : active === 'break' ? '休息中' : '开始专注'}
+              {active === 'focus' ? '结束专注' : active === 'break' ? '结束休息 · 开始专注' : '开始专注'}
             </button>
             <button disabled={timer.phase === 'idle'} onClick={() => setTimer((t) => pauseResume(t, Date.now()))}>
               {timer.phase === 'paused' ? '继续' : '暂停'}
