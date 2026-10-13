@@ -3,7 +3,7 @@
 Focus timer wired to an Obsidian vault.
 
 - Pick a task from the **in-progress tasks**: notes in `40_Tasks/` whose `status` frontmatter includes `1 - Doing`.
-- Focus counts **up**; stopping starts a **count-down break of 1/3 the focus time**, then the next focus starts automatically.
+- Focus counts **up**; stopping starts a **count-down break of 1/3 the focus time**, then the next focus starts automatically. During a break (running or paused) the main button becomes **结束休息 · 开始专注**, which skips the rest of the break and starts the next focus right away.
 - On every stop, the per-task total time for the day is written to `70_Logs/<YYYY-Www>.md` under that day's `## dd-Mmm-yyyy` heading, inside a managed `<!-- dy-timer:start/end -->` block (text outside it is never touched). Tasks with under 1 minute total that day are not logged.
 
 Stack: Electron + electron-vite + React + TypeScript.
