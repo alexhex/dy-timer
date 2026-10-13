@@ -10,6 +10,9 @@ const DEFAULT_CONFIG: Config = {
   logsDir: '70_Logs'
 }
 
+// Packaged builds embed build/icon.{icns,ico}; in dev we set it explicitly.
+const devIcon = join(__dirname, '../../build/icon.png')
+
 const file = (name: string) => join(app.getPath('userData'), name)
 
 async function readJson<T>(name: string): Promise<T | null> {
@@ -39,6 +42,7 @@ function createWindow() {
     minWidth: 820,
     minHeight: 560,
     titleBarStyle: 'hiddenInset',
+    ...(app.isPackaged ? {} : { icon: devIcon }),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -53,6 +57,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (!app.isPackaged) app.dock?.setIcon(devIcon)
   ipcMain.handle('config:get', getConfig)
   ipcMain.handle('config:set', async (_e, c: Config) => {
     await writeJson('config.json', c)
