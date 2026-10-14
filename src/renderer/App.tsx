@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BreakRecord, Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
-import { activePhase, breakRestedMs, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, startFocus, stopFocus } from './timer'
+import { activePhase, breakRestedMs, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
 
 async function ding() {
   try {
@@ -109,13 +109,12 @@ export function App() {
     syncLog(startedAt)
   }, [syncLog])
 
-  /** Ends the break (running or paused) and goes straight into the next focus. */
+  /** Ends the break (running or paused) and starts the next focus; the break keeps going if task/deliverable is missing. */
   const finishBreak = useCallback(
     (cur: TimerState) => {
       const { next: idle, rest } = endBreak(cur, Date.now())
-      const started = doStart(idle)
-      // Continue straight into the next focus; if that fails, release the lock.
-      const next = started ?? { ...idle, taskLocked: false }
+      const next = doStart(idle)
+      if (!next) return
       const nextBreaks = rest ? [...ref.current.breaks, rest] : ref.current.breaks
       ref.current = { ...ref.current, timer: next, breaks: nextBreaks }
       setTimer(next)
@@ -132,17 +131,21 @@ export function App() {
       const t = Date.now()
       setNow(t)
       const cur = ref.current.timer
-      if (cur.phase === 'break' && cur.breakDurationMs > 0 && elapsedMs(cur, t) >= cur.breakDurationMs) {
+      if (reachesBreakTarget(cur, t)) {
+        // Chime once, then keep counting the break up until focus is started by hand.
         ding()
-        finishBreak(cur)
+        const next = { ...cur, breakOvertime: true }
+        ref.current = { ...ref.current, timer: next }
+        setTimer(next)
       }
     }, 250)
     return () => clearInterval(id)
-  }, [finishBreak])
+  }, [])
 
   const active = activePhase(timer)
   const elapsed = elapsedMs(timer, now)
-  const display = active === 'break' ? Math.max(0, timer.breakDurationMs - elapsed) : elapsed
+  const overtime = active === 'break' && (timer.breakOvertime || elapsed >= timer.breakDurationMs)
+  const display = active === 'break' && !overtime ? timer.breakDurationMs - elapsed : elapsed
   const todayMs = useMemo(
     () =>
       sessions.filter((s) => sameDay(s.startedAt, now)).reduce((a, s) => a + s.durationMs, 0) +
@@ -159,7 +162,7 @@ export function App() {
     if (active === 'focus' && timer.task) m.set(timer.task, (m.get(timer.task) ?? 0) + elapsed)
     return [...m].map(([task, ms]) => ({ task, ms })).sort((a, b) => b.ms - a.ms)
   }, [sessions, now, active, elapsed, timer.task])
-  const label = timer.phase === 'paused' ? (active === 'break' ? '休息 · 已暂停' : '专注 · 已暂停') : active === 'break' ? '休息' : '专注'
+  const label = timer.phase === 'paused' ? (active === 'break' ? '休息 · 已暂停' : '专注 · 已暂停') : active === 'break' ? (overtime ? '休息 · 已到时间' : '休息') : '专注'
   const locked = active === 'focus'
 
   const selectTask = (name: string) => setTimer((t) => ({ ...t, task: name }))
@@ -205,7 +208,12 @@ export function App() {
           <div className="sub">
             {timer.phase === 'idle' && '准备开始'}
             {active === 'focus' && (timer.phase === 'paused' ? '已暂停' : '正计时')}
-            {active === 'break' && (timer.phase === 'paused' ? '已暂停' : '倒计时 · 结束后自动开始下一轮专注')}
+            {active === 'break' &&
+              (timer.phase === 'paused'
+                ? '已暂停'
+                : overtime
+                  ? '正计时 · 休息仍在累计，点「开始专注」进入下一轮'
+                  : '倒计时 · 到点后提醒并继续正计时')}
           </div>
 
           <div className="brief">
@@ -236,7 +244,7 @@ export function App() {
                 }
               }}
             >
-              {active === 'focus' ? '结束专注' : active === 'break' ? '结束休息 · 开始专注' : '开始专注'}
+              {active === 'focus' ? '结束专注' : active === 'break' ? (overtime ? '开始专注' : '结束休息 · 开始专注') : '开始专注'}
             </button>
             <button disabled={timer.phase === 'idle'} onClick={() => setTimer((t) => pauseResume(t, Date.now()))}>
               {timer.phase === 'paused' ? '继续' : '暂停'}

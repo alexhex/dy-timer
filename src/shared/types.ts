@@ -27,7 +27,7 @@ export interface Session {
   durationMs: number
 }
 
-/** One finished break; durationMs is the time actually spent resting (pauses excluded). */
+/** One finished break; durationMs is the time actually spent resting, overtime included, pauses excluded. */
 export interface BreakRecord {
   startedAt: number
   endedAt: number
@@ -41,7 +41,10 @@ export interface TimerState {
   phaseBaseElapsedMs: number
   focusStartedAt: number | null
   breakStartedAt: number | null
+  /** Break target (1/3 of focus); after it the break keeps counting up until focus is started by hand */
   breakDurationMs: number
+  /** the break target has been reached and the chime has played */
+  breakOvertime: boolean
   lastFocusDurationMs: number
   task: string
   deliverable: string
