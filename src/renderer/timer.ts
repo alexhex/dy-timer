@@ -8,6 +8,7 @@ export const initialTimer: TimerState = {
   focusStartedAt: null,
   breakStartedAt: null,
   breakDurationMs: 0,
+  breakOvertime: false,
   lastFocusDurationMs: 0,
   task: '',
   deliverable: '',
@@ -61,16 +62,21 @@ export function stopFocus(s: TimerState, now: number): { next: TimerState; focus
       breakStartedAt: now,
       lastFocusDurationMs: focusMs,
       breakDurationMs: breakTargetMs(focusMs),
+      breakOvertime: false,
       taskLocked: !s.stopAsDone,
       stopAsDone: false
     }
   }
 }
 
-/** Rest actually taken so far in the current break: pauses excluded, capped at the break target. */
+/** Rest taken so far in the current break, overtime included, pauses excluded. */
 export function breakRestedMs(s: TimerState, now: number): number {
-  if (activePhase(s) !== 'break') return 0
-  return Math.min(elapsedMs(s, now), s.breakDurationMs)
+  return activePhase(s) === 'break' ? elapsedMs(s, now) : 0
+}
+
+/** True once a running break first reaches its target (the caller chimes and stores the flag). */
+export function reachesBreakTarget(s: TimerState, now: number): boolean {
+  return s.phase === 'break' && !s.breakOvertime && s.breakDurationMs > 0 && elapsedMs(s, now) >= s.breakDurationMs
 }
 
 /** Ends the break; returns the record of the rest taken (null if there was no break running). */
@@ -82,6 +88,6 @@ export function endBreak(s: TimerState, now: number): { next: TimerState; rest: 
       : null
   return {
     rest,
-    next: { ...s, phase: 'idle', phaseBeforePause: null, phaseStartedAt: null, phaseBaseElapsedMs: 0, breakStartedAt: null, breakDurationMs: 0 }
+    next: { ...s, phase: 'idle', phaseBeforePause: null, phaseStartedAt: null, phaseBaseElapsedMs: 0, breakStartedAt: null, breakDurationMs: 0, breakOvertime: false }
   }
 }
