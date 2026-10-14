@@ -20,6 +20,20 @@
 
 ---
 
+## 直接下载安装包（最简单）
+
+在 GitHub 的 [Releases](https://github.com/alexhex/dy-timer/releases) 页面，每个版本下面的 Assets 里有：
+
+- `Dynamic.Timer.Setup.x.y.z.exe`：Windows 安装程序
+- `Dynamic.Timer-x.y.z-arm64.dmg`：macOS（Apple 芯片）磁盘映像
+
+安装包没有代码签名，第一次打开时：
+
+- **Windows**：SmartScreen 提示「Windows 已保护你的电脑」→ 点「更多信息」→「仍要运行」。
+- **macOS**：提示无法验证开发者 → 打开「系统设置 → 隐私与安全性」，在下方点「仍要打开」。
+
+安装包由 GitHub Actions 在发布 Release 时自动生成（`.github/workflows/release.yml`），要求 tag 与 `package.json` 里的版本一致，例如 `v1.1.1`。下面是从源码运行或自己打包的方法。
+
 ## macOS
 
 ### 1. 安装 Node.js 和 Git

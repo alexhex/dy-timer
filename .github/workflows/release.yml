@@ -1,0 +1,69 @@
+# Builds the Windows installer (.exe) and macOS disk image (.dmg) and attaches
+# them to the GitHub Release.
+#
+# - Runs automatically when a Release is published.
+# - Can also be run by hand (Actions → Release installers → Run workflow) for an
+#   existing tag, e.g. to add installers to a release published earlier.
+name: Release installers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach installers to (e.g. v1.1.1)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            dist: dist:win
+            files: dist/*.exe
+          - os: macos-latest # Apple Silicon
+            dist: dist:mac
+            files: dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check tag matches package.json version
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          if [ "$v" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match package.json version $v"
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Build installer
+        run: npm run ${{ matrix.dist }} -- --publish never
+        env:
+          # No code-signing certificate: build unsigned instead of failing.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Attach to release
+        run: gh release upload "$TAG" ${{ matrix.files }} --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
