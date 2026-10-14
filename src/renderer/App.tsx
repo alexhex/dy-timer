@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
-import { activePhase, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, startFocus, stopFocus } from './timer'
+import type { BreakRecord, Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
+import { activePhase, breakRestedMs, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, startFocus, stopFocus } from './timer'
 
 async function ding() {
   try {
@@ -27,6 +27,7 @@ const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Dat
 export function App() {
   const [timer, setTimer] = useState<TimerState>(initialTimer)
   const [sessions, setSessions] = useState<Session[]>([])
+  const [breaks, setBreaks] = useState<BreakRecord[]>([])
   const [tasks, setTasks] = useState<WeekTask[]>([])
   const [weekKey, setWeekKey] = useState('')
   const [tasksError, setTasksError] = useState('')
@@ -37,8 +38,8 @@ export function App() {
   const [loaded, setLoaded] = useState(false)
 
   // Latest state for the interval callback.
-  const ref = useRef({ timer, sessions })
-  ref.current = { timer, sessions }
+  const ref = useRef({ timer, sessions, breaks })
+  ref.current = { timer, sessions, breaks }
 
   const loadTasks = useCallback(async () => {
     const r = await window.api.listDoingTasks()
@@ -53,6 +54,7 @@ export function App() {
       if (saved) {
         setTimer({ ...initialTimer, ...saved.timer })
         setSessions(saved.sessions ?? [])
+        setBreaks(saved.breaks ?? [])
       }
       setConfig(await window.api.getConfig())
       await loadTasks()
@@ -62,10 +64,10 @@ export function App() {
 
   useEffect(() => {
     if (!loaded) return
-    const s: PersistedState = { timer, sessions }
+    const s: PersistedState = { timer, sessions, breaks }
     const id = setTimeout(() => window.api.saveState(s), 120)
     return () => clearTimeout(id)
-  }, [timer, sessions, loaded])
+  }, [timer, sessions, breaks, loaded])
 
   const syncLog = useCallback(async (ts: number) => {
     // Give the debounced state save time to land before main reads it.
@@ -101,7 +103,7 @@ export function App() {
       durationMs: focusMs
     }
     const nextSessions = [...cur.sessions, session]
-    ref.current = { timer: next, sessions: nextSessions }
+    ref.current = { ...cur, timer: next, sessions: nextSessions }
     setSessions(nextSessions)
     setTimer(next)
     syncLog(startedAt)
@@ -110,14 +112,19 @@ export function App() {
   /** Ends the break (running or paused) and goes straight into the next focus. */
   const finishBreak = useCallback(
     (cur: TimerState) => {
-      const idle = endBreak(cur)
+      const { next: idle, rest } = endBreak(cur, Date.now())
       const started = doStart(idle)
       // Continue straight into the next focus; if that fails, release the lock.
       const next = started ?? { ...idle, taskLocked: false }
-      ref.current = { ...ref.current, timer: next }
+      const nextBreaks = rest ? [...ref.current.breaks, rest] : ref.current.breaks
+      ref.current = { ...ref.current, timer: next, breaks: nextBreaks }
       setTimer(next)
+      if (rest) {
+        setBreaks(nextBreaks)
+        syncLog(rest.startedAt)
+      }
     },
-    [doStart]
+    [doStart, syncLog]
   )
 
   useEffect(() => {
@@ -141,6 +148,10 @@ export function App() {
       sessions.filter((s) => sameDay(s.startedAt, now)).reduce((a, s) => a + s.durationMs, 0) +
       (active === 'focus' ? elapsed : 0),
     [sessions, now, active, elapsed]
+  )
+  const todayBreakMs = useMemo(
+    () => breaks.filter((b) => sameDay(b.startedAt, now)).reduce((a, b) => a + b.durationMs, 0) + breakRestedMs(timer, now),
+    [breaks, now, timer]
   )
   const todayTotals = useMemo(() => {
     const m = new Map<string, number>()
@@ -244,7 +255,11 @@ export function App() {
         <section className="panel today">
           <div className="panel-head">
             <h2>今日</h2>
-            <span className="chip">{formatClock(todayMs)}</span>
+            <span className="chip" title="专注">{formatClock(todayMs)}</span>
+          </div>
+          <div className="row rest-total">
+            <span className="muted">休息累计（不含暂停）</span>
+            <span>{formatClock(todayBreakMs)}</span>
           </div>
           {todayTotals.length === 0 && <p className="muted">还没有记录。</p>}
           <ul className="history">

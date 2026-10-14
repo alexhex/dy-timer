@@ -75,7 +75,7 @@ app.whenReady().then(() => {
   ipcMain.handle('log:sync', async (_e, ts: number) => {
     try {
       const state = await readJson<PersistedState>('state.json')
-      const path = await syncDay(await getConfig(), state?.sessions ?? [], ts)
+      const path = await syncDay(await getConfig(), state?.sessions ?? [], ts, state?.breaks ?? [])
       return { ok: true, file: path }
     } catch (e) {
       return { ok: false, error: (e as Error).message }

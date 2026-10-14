@@ -27,12 +27,20 @@ export interface Session {
   durationMs: number
 }
 
+/** One finished break; durationMs is the time actually spent resting (pauses excluded). */
+export interface BreakRecord {
+  startedAt: number
+  endedAt: number
+  durationMs: number
+}
+
 export interface TimerState {
   phase: 'idle' | 'focus' | 'break' | 'paused'
   phaseBeforePause: 'focus' | 'break' | null
   phaseStartedAt: number | null
   phaseBaseElapsedMs: number
   focusStartedAt: number | null
+  breakStartedAt: number | null
   breakDurationMs: number
   lastFocusDurationMs: number
   task: string
@@ -45,6 +53,7 @@ export interface TimerState {
 export interface PersistedState {
   timer: TimerState
   sessions: Session[]
+  breaks?: BreakRecord[]
 }
 
 export interface SyncResult {
