@@ -1,4 +1,4 @@
-import type { TimerState } from '../shared/types'
+import type { BreakRecord, TimerState } from '../shared/types'
 
 export const initialTimer: TimerState = {
   phase: 'idle',
@@ -6,6 +6,7 @@ export const initialTimer: TimerState = {
   phaseStartedAt: null,
   phaseBaseElapsedMs: 0,
   focusStartedAt: null,
+  breakStartedAt: null,
   breakDurationMs: 0,
   lastFocusDurationMs: 0,
   task: '',
@@ -57,6 +58,7 @@ export function stopFocus(s: TimerState, now: number): { next: TimerState; focus
       phaseStartedAt: now,
       phaseBaseElapsedMs: 0,
       focusStartedAt: null,
+      breakStartedAt: now,
       lastFocusDurationMs: focusMs,
       breakDurationMs: breakTargetMs(focusMs),
       taskLocked: !s.stopAsDone,
@@ -65,6 +67,21 @@ export function stopFocus(s: TimerState, now: number): { next: TimerState; focus
   }
 }
 
-export function endBreak(s: TimerState): TimerState {
-  return { ...s, phase: 'idle', phaseBeforePause: null, phaseStartedAt: null, phaseBaseElapsedMs: 0, breakDurationMs: 0 }
+/** Rest actually taken so far in the current break: pauses excluded, capped at the break target. */
+export function breakRestedMs(s: TimerState, now: number): number {
+  if (activePhase(s) !== 'break') return 0
+  return Math.min(elapsedMs(s, now), s.breakDurationMs)
+}
+
+/** Ends the break; returns the record of the rest taken (null if there was no break running). */
+export function endBreak(s: TimerState, now: number): { next: TimerState; rest: BreakRecord | null } {
+  const durationMs = breakRestedMs(s, now)
+  const rest =
+    activePhase(s) === 'break' && durationMs > 0
+      ? { startedAt: s.breakStartedAt ?? now - durationMs, endedAt: now, durationMs }
+      : null
+  return {
+    rest,
+    next: { ...s, phase: 'idle', phaseBeforePause: null, phaseStartedAt: null, phaseBaseElapsedMs: 0, breakStartedAt: null, breakDurationMs: 0 }
+  }
 }

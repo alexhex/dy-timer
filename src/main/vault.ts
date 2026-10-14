@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'yaml'
-import type { Config, Session, WeekTask } from '../shared/types'
+import type { BreakRecord, Config, Session, WeekTask } from '../shared/types'
 import { newLogFile, upsertDayBlock } from './log'
 import { isoWeekKey } from './week'
 
@@ -51,10 +51,11 @@ export async function listDoingTasks(cfg: Config, now = new Date()) {
   return { weekKey, tasks }
 }
 
-export async function syncDay(cfg: Config, all: Session[], ts: number): Promise<string> {
+export async function syncDay(cfg: Config, all: Session[], ts: number, allBreaks: BreakRecord[] = []): Promise<string> {
   const day = new Date(ts)
   const key = (t: number) => new Date(t).toDateString()
   const sessions = all.filter((s) => key(s.startedAt) === key(ts))
+  const breaks = allBreaks.filter((b) => key(b.startedAt) === key(ts))
   const dir = join(cfg.vaultPath, cfg.logsDir)
   const file = join(dir, `${isoWeekKey(day)}.md`)
   let content: string
@@ -65,7 +66,7 @@ export async function syncDay(cfg: Config, all: Session[], ts: number): Promise<
     await mkdir(dir, { recursive: true })
     content = newLogFile(isoWeekKey(day), day)
   }
-  const next = upsertDayBlock(content, day, sessions)
+  const next = upsertDayBlock(content, day, sessions, breaks)
   if (next !== content) await writeFile(file, next, 'utf8')
   return file
 }

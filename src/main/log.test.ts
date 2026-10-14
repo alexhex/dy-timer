@@ -41,6 +41,15 @@ describe('upsertDayBlock', () => {
     expect(three).toContain('- [[VE Workshop]] — 45m')
   })
 
+  it('adds the day break total (pauses already excluded) when at least a minute', () => {
+    const b = (a: number, ms: number) => ({ startedAt: a, endedAt: a + ms, durationMs: ms })
+    const sess = [s('1', at(9, 0), at(9, 35))]
+    const out = upsertDayBlock(base, day, sess, [b(at(9, 35), 11 * 60_000), b(at(10, 30), 4 * 60_000)])
+    expect(out).toContain('**专注合计 35m** · **休息合计 15m**')
+    expect(upsertDayBlock(base, day, sess, [b(at(9, 35), 20_000)])).not.toContain('休息合计')
+    expect(upsertDayBlock(out, day, sess)).not.toContain('休息合计')
+  })
+
   it('creates the day section when missing and skips tiny sessions', () => {
     const out = upsertDayBlock('# x\n', day, [s('1', at(9, 0), at(9, 35))])
     expect(out).toContain('## 12-Oct-2026')

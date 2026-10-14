@@ -1,4 +1,4 @@
-import type { Session } from '../shared/types'
+import type { BreakRecord, Session } from '../shared/types'
 import { dayHeading, fmtMinutes } from './week'
 
 export const BLOCK_START = '<!-- dy-timer:start -->'
@@ -35,22 +35,25 @@ export function totalsByTask(sessions: Session[]): { task: string; ms: number }[
   return [...m].map(([task, ms]) => ({ task, ms })).sort((a, b) => b.ms - a.ms)
 }
 
-export function renderBlock(totals: { task: string; ms: number }[]): string {
+export function renderBlock(totals: { task: string; ms: number }[], breakMs = 0): string {
   const sum = totals.reduce((n, t) => n + t.ms, 0)
   const lines = totals.map((t) => `- [[${t.task}]] — ${fmtMinutes(t.ms)}`)
-  return [BLOCK_START, `**专注合计 ${fmtMinutes(sum)}**`, ...lines, BLOCK_END].join('\n')
+  const head = [`**专注合计 ${fmtMinutes(sum)}**`]
+  if (breakMs >= MIN_LOGGED_MS) head.push(`**休息合计 ${fmtMinutes(breakMs)}**`)
+  return [BLOCK_START, head.join(' · '), ...lines, BLOCK_END].join('\n')
 }
 
 /**
- * Put `sessions` (all belonging to `day`) into the weekly log as a managed block
+ * Put `sessions` and `breaks` (all belonging to `day`) into the weekly log as a managed block
  * at the end of that day's `## dd-Mmm-yyyy` section. Text outside the block is untouched.
  */
-export function upsertDayBlock(content: string, day: Date, sessions: Session[]): string {
+export function upsertDayBlock(content: string, day: Date, sessions: Session[], breaks: BreakRecord[] = []): string {
   const eol = content.includes('\r\n') ? '\r\n' : '\n'
   const lines = content.replace(/\r\n/g, '\n').split('\n')
   const heading = `## ${dayHeading(day)}`
   const logged = totalsByTask(sessions).filter((t) => t.ms >= MIN_LOGGED_MS)
-  const block = logged.length ? renderBlock(logged).split('\n') : []
+  const breakMs = breaks.reduce((n, b) => n + b.durationMs, 0)
+  const block = logged.length ? renderBlock(logged, breakMs).split('\n') : []
 
   const h = lines.findIndex((l) => l.trim() === heading)
   if (h === -1) {
