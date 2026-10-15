@@ -64,7 +64,7 @@ export interface PersistedState {
 }
 
 /** Why the timer was paused automatically. */
-export type AutoPauseReason = 'suspend' | 'lock' | 'sleep' | 'closed'
+export type AutoPauseReason = 'suspend' | 'sleep' | 'closed'
 
 export interface SyncResult {
   ok: boolean
@@ -82,6 +82,6 @@ export interface Api {
   syncDay(ts: number): Promise<SyncResult>
   /** Mini mode: small always-on-top window with only the clock and current task; false restores. Returns the new mode. */
   setMini(on: boolean): Promise<boolean>
-  /** Machine is going to sleep or the screen got locked; returns an unsubscribe function. */
+  /** Machine is going to sleep; returns an unsubscribe function. */
   onAutoPause(cb: (e: { reason: AutoPauseReason; at: number }) => void): () => void
 }

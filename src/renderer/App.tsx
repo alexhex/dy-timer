@@ -31,7 +31,6 @@ const hhmm = (ts: number) => new Date(ts).toTimeString().slice(0, 5)
 
 const AUTO_PAUSE_TEXT: Record<AutoPauseReason, string> = {
   suspend: '电脑进入睡眠',
-  lock: '屏幕已锁定',
   sleep: '电脑休眠过',
   closed: '上次 App 未在计时结束前关闭'
 }
@@ -60,7 +59,7 @@ export function App() {
   /** What gets written to state.json, stamped with the time it was taken. */
   const snapshot = (): PersistedState => ({ ...ref.current, heartbeatAt: Date.now() })
 
-  /** Pause a running timer as of `at`, so sleep / lock / closed time is not counted. */
+  /** Pause a running timer as of `at`, so sleep / closed time is not counted. */
   const autoPause = useCallback((reason: AutoPauseReason, at: number) => {
     const cur = ref.current.timer
     if (!isRunning(cur)) return

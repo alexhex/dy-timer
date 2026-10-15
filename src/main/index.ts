@@ -129,13 +129,13 @@ app.whenReady().then(() => {
     const win = BrowserWindow.fromWebContents(e.sender)
     return win ? setMini(win, on) : false
   })
-  // Sleep / screen lock pause a running timer (the renderer also catches missed events via tick gaps).
+  // Sleep pauses a running timer (the renderer also catches missed events via tick gaps).
+  // Screen lock deliberately does not: locking during a break should keep counting rest.
   const autoPause = (reason: AutoPauseReason) => () => {
     const at = Date.now()
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send('power:pause', { reason, at })
   }
   powerMonitor.on('suspend', autoPause('suspend'))
-  powerMonitor.on('lock-screen', autoPause('lock'))
   createWindow()
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow())
 })
