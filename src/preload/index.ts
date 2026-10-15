@@ -7,7 +7,8 @@ const api: Api = {
   listDoingTasks: () => ipcRenderer.invoke('tasks:doing'),
   loadState: () => ipcRenderer.invoke('state:load'),
   saveState: (s) => ipcRenderer.invoke('state:save', s),
-  syncDay: (ts) => ipcRenderer.invoke('log:sync', ts)
+  syncDay: (ts) => ipcRenderer.invoke('log:sync', ts),
+  setMini: (on) => ipcRenderer.invoke('window:mini', on)
 }
 
 contextBridge.exposeInMainWorld('api', api)

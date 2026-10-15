@@ -11,7 +11,8 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -app
 .app.phase-break { --accent: #4f6590; --sel: #e4e9f4; }
 .titlebar { -webkit-app-region: drag; display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
 .mac .titlebar { padding-left: 84px; }
-.titlebar button { -webkit-app-region: no-drag; margin-left: auto; }
+.titlebar button { -webkit-app-region: no-drag; }
+.titlebar .push { margin-left: auto; }
 .brand { font-weight: 600; }
 .chip { background: var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: 280px 1fr 260px; gap: 12px; padding: 0 16px 16px; }
@@ -46,3 +47,13 @@ input { font: inherit; color: inherit; background: var(--bg); border: 1px solid 
 .settings { position: fixed; right: 16px; top: 44px; width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 30px #0004; }
 .settings label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
 .settings .hint { font-size: 11px; opacity: 0.8; }
+
+/* Mini mode: tiny always-on-top window, draggable anywhere except the restore button */
+.app.mini { -webkit-app-region: drag; user-select: none; padding: 6px 12px 8px; background: var(--panel); justify-content: center; overflow: hidden; }
+.mac .app.mini { padding-top: 6px; }
+.mini-top { display: flex; align-items: center; justify-content: space-between; }
+.mini .label { font-size: 11px; }
+.mini .pin { -webkit-app-region: no-drag; font-size: 15px; line-height: 1; padding: 2px 4px; }
+.mini .clock { font-size: 34px; font-weight: 300; line-height: 1.05; }
+.mini.paused .clock { color: var(--muted); }
+.mini-task { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

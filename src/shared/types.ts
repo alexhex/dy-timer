@@ -75,4 +75,6 @@ export interface Api {
   saveState(s: PersistedState): Promise<void>
   /** Rewrite the day block of the weekly log for the day of `ts` */
   syncDay(ts: number): Promise<SyncResult>
+  /** Mini mode: small always-on-top window with only the clock and current task; false restores. Returns the new mode. */
+  setMini(on: boolean): Promise<boolean>
 }
