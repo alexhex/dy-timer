@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { BreakRecord, Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
-import { activePhase, breakRestedMs, DEFAULT_BREAK_RATIO, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
+import type { AutoPauseReason, BreakRecord, Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
+import { activePhase, breakRestedMs, DEFAULT_BREAK_RATIO, elapsedMs, endBreak, formatClock, initialTimer, isRunning, pauseAt, pauseResume, reachesBreakTarget, SLEEP_GAP_MS, startFocus, stopFocus } from './timer'
 
 async function ding() {
   try {
@@ -24,6 +24,18 @@ async function ding() {
 
 const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString()
 
+/** How often the running clock is saved, so a crash or quit loses at most this much time. */
+const HEARTBEAT_MS = 15_000
+
+const hhmm = (ts: number) => new Date(ts).toTimeString().slice(0, 5)
+
+const AUTO_PAUSE_TEXT: Record<AutoPauseReason, string> = {
+  suspend: '电脑进入睡眠',
+  lock: '屏幕已锁定',
+  sleep: '电脑休眠过',
+  closed: '上次 App 未在计时结束前关闭'
+}
+
 export function App() {
   const [timer, setTimer] = useState<TimerState>(initialTimer)
   const [sessions, setSessions] = useState<Session[]>([])
@@ -45,6 +57,18 @@ export function App() {
   // Latest state for the interval callback.
   const ref = useRef({ timer, sessions, breaks })
   ref.current = { timer, sessions, breaks }
+  /** What gets written to state.json, stamped with the time it was taken. */
+  const snapshot = (): PersistedState => ({ ...ref.current, heartbeatAt: Date.now() })
+
+  /** Pause a running timer as of `at`, so sleep / lock / closed time is not counted. */
+  const autoPause = useCallback((reason: AutoPauseReason, at: number) => {
+    const cur = ref.current.timer
+    if (!isRunning(cur)) return
+    const next = pauseAt(cur, at)
+    ref.current = { ...ref.current, timer: next }
+    setTimer(next)
+    setMessage(`${AUTO_PAUSE_TEXT[reason]}，已在 ${hhmm(at)} 自动暂停，之后的时间不计入。点「继续」接着计时。`)
+  }, [])
 
   const loadTasks = useCallback(async () => {
     const r = await window.api.listDoingTasks()
@@ -57,9 +81,15 @@ export function App() {
     ;(async () => {
       const saved = await window.api.loadState()
       if (saved) {
-        setTimer({ ...initialTimer, ...saved.timer })
-        setSessions(saved.sessions ?? [])
-        setBreaks(saved.breaks ?? [])
+        const timer = { ...initialTimer, ...saved.timer }
+        const seen = saved.heartbeatAt
+        // The clock was running when the app went away: count only up to when it was last seen.
+        const away = seen != null && isRunning(timer) && Date.now() - seen > SLEEP_GAP_MS
+        ref.current = { timer: away ? pauseAt(timer, seen) : timer, sessions: saved.sessions ?? [], breaks: saved.breaks ?? [] }
+        setTimer(ref.current.timer)
+        setSessions(ref.current.sessions)
+        setBreaks(ref.current.breaks)
+        if (away) setMessage(`${AUTO_PAUSE_TEXT.closed}，已在 ${hhmm(seen)} 自动暂停，之后的时间不计入。点「继续」接着计时。`)
       }
       const c = await window.api.getConfig()
       ratioRef.current = c.breakRatio
@@ -71,14 +101,13 @@ export function App() {
 
   useEffect(() => {
     if (!loaded) return
-    const s: PersistedState = { timer, sessions, breaks }
-    const id = setTimeout(() => window.api.saveState(s), 120)
+    const id = setTimeout(() => window.api.saveState(snapshot()), 120)
     return () => clearTimeout(id)
   }, [timer, sessions, breaks, loaded])
 
   const syncLog = useCallback(async (ts: number) => {
     // Give the debounced state save time to land before main reads it.
-    await window.api.saveState(ref.current as PersistedState)
+    await window.api.saveState(snapshot())
     const r = await window.api.syncDay(ts)
     setMessage(r.ok ? `已写入日志：${r.file}` : `写入日志失败：${r.error}`)
   }, [])
@@ -133,10 +162,21 @@ export function App() {
     [doStart, syncLog]
   )
 
+  useEffect(() => window.api.onAutoPause(({ reason, at }) => autoPause(reason, at)), [autoPause])
+
   useEffect(() => {
+    let lastTick = Date.now()
+    let lastBeat = 0
     const id = setInterval(() => {
       const t = Date.now()
       setNow(t)
+      // A long gap between ticks means the machine slept without a suspend event reaching us.
+      if (t - lastTick > SLEEP_GAP_MS) autoPause('sleep', lastTick)
+      lastTick = t
+      if (isRunning(ref.current.timer) && t - lastBeat >= HEARTBEAT_MS) {
+        lastBeat = t
+        window.api.saveState(snapshot())
+      }
       const cur = ref.current.timer
       if (reachesBreakTarget(cur, t)) {
         // Chime once, then keep counting the break up until focus is started by hand.
@@ -147,7 +187,7 @@ export function App() {
       }
     }, 250)
     return () => clearInterval(id)
-  }, [])
+  }, [autoPause])
 
   const active = activePhase(timer)
   const elapsed = elapsedMs(timer, now)

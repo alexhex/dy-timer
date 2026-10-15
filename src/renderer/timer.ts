@@ -48,6 +48,20 @@ export function pauseResume(s: TimerState, now: number): TimerState {
   return { ...s, phaseBaseElapsedMs: elapsedMs(s, now), phaseBeforePause: s.phase, phase: 'paused', phaseStartedAt: null }
 }
 
+/** Ticks further apart than this mean the machine slept, or the app was closed, in between. */
+export const SLEEP_GAP_MS = 60_000
+
+export const isRunning = (s: TimerState) => s.phase === 'focus' || s.phase === 'break'
+
+/**
+ * Pause a running timer as of `at` (when the machine went to sleep, the screen locked or the app
+ * was last seen running), so that time is not counted. Idle or already-paused timers are unchanged.
+ */
+export function pauseAt(s: TimerState, at: number): TimerState {
+  if (!isRunning(s)) return s
+  return pauseResume(s, Math.max(at, s.phaseStartedAt ?? at))
+}
+
 /** Ends focus and starts the break; the caller records the session. */
 export function stopFocus(s: TimerState, now: number, breakRatio = DEFAULT_BREAK_RATIO): { next: TimerState; focusMs: number; startedAt: number } {
   const focusMs = elapsedMs(s, now)

@@ -28,16 +28,46 @@ function ymd(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** One line per task with its accumulated time for the day, longest first. */
-export function totalsByTask(sessions: Session[]): { task: string; ms: number }[] {
-  const m = new Map<string, number>()
-  for (const s of sessions) m.set(s.task, (m.get(s.task) ?? 0) + s.durationMs)
-  return [...m].map(([task, ms]) => ({ task, ms })).sort((a, b) => b.ms - a.ms)
+export interface DeliverableTotal {
+  text: string
+  ms: number
+  /** finished in at least one of its sessions */
+  done: boolean
 }
 
-export function renderBlock(totals: { task: string; ms: number }[], breakMs = 0): string {
+export interface TaskTotal {
+  task: string
+  ms: number
+  /** in the order first worked on; same text within a task is merged */
+  deliverables?: DeliverableTotal[]
+}
+
+/** One line per task with its accumulated time for the day, longest first, plus its deliverables. */
+export function totalsByTask(sessions: Session[]): TaskTotal[] {
+  const m = new Map<string, { ms: number; dels: Map<string, DeliverableTotal> }>()
+  for (const s of [...sessions].sort((a, b) => a.startedAt - b.startedAt)) {
+    const t = m.get(s.task) ?? { ms: 0, dels: new Map() }
+    t.ms += s.durationMs
+    const text = (s.deliverable ?? '').replace(/\s+/g, ' ').trim()
+    if (text) {
+      const d = t.dels.get(text) ?? { text, ms: 0, done: false }
+      d.ms += s.durationMs
+      d.done ||= s.done
+      t.dels.set(text, d)
+    }
+    m.set(s.task, t)
+  }
+  return [...m]
+    .map(([task, t]) => ({ task, ms: t.ms, deliverables: [...t.dels.values()] }))
+    .sort((a, b) => b.ms - a.ms)
+}
+
+export function renderBlock(totals: TaskTotal[], breakMs = 0): string {
   const sum = totals.reduce((n, t) => n + t.ms, 0)
-  const lines = totals.map((t) => `- [[${t.task}]] — ${fmtMinutes(t.ms)}`)
+  const lines = totals.flatMap((t) => [
+    `- [[${t.task}]] — ${fmtMinutes(t.ms)}`,
+    ...(t.deliverables ?? []).map((d) => `\t- ${d.done ? '✅' : '⏳'} ${d.text} — ${fmtMinutes(d.ms)}`)
+  ])
   const head = [`**专注合计 ${fmtMinutes(sum)}**`]
   if (breakMs >= MIN_LOGGED_MS) head.push(`**休息合计 ${fmtMinutes(breakMs)}**`)
   return [BLOCK_START, head.join(' · '), ...lines, BLOCK_END].join('\n')

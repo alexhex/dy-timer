@@ -5,8 +5,8 @@ import { isDoing } from './vault'
 import type { Session } from '../shared/types'
 
 const at = (h: number, m: number) => new Date(2026, 9, 12, h, m).getTime()
-const s = (id: string, a: number, b: number, task = 'VE Workshop'): Session => ({
-  id, task, deliverable: 'draft', done: id === '1', startedAt: a, endedAt: b, durationMs: b - a
+const s = (id: string, a: number, b: number, task = 'VE Workshop', deliverable = 'draft', done = id === '1'): Session => ({
+  id, task, deliverable, done, startedAt: a, endedAt: b, durationMs: b - a
 })
 
 describe('week helpers', () => {
@@ -48,6 +48,26 @@ describe('upsertDayBlock', () => {
     expect(out).toContain('**专注合计 35m** · **休息合计 15m**')
     expect(upsertDayBlock(base, day, sess, [b(at(9, 35), 20_000)])).not.toContain('休息合计')
     expect(upsertDayBlock(out, day, sess)).not.toContain('休息合计')
+  })
+
+  it('lists each task\'s deliverables under it, merged by text, in the order worked on', () => {
+    const sess = [
+      s('a', at(9, 0), at(9, 30), 'VE Workshop', '写大纲', false),
+      s('b', at(10, 0), at(10, 20), 'VE Workshop', '画流程图', true),
+      s('c', at(11, 0), at(11, 15), 'VE Workshop', ' 写大纲 ', true),
+      s('d', at(14, 0), at(14, 40), 'Other', 'review\nPR', false)
+    ]
+    const out = upsertDayBlock(base, day, sess)
+    expect(out).toContain(
+      [
+        '- [[VE Workshop]] — 1h 5m',
+        '\t- ✅ 写大纲 — 45m',
+        '\t- ✅ 画流程图 — 20m',
+        '- [[Other]] — 40m',
+        '\t- ⏳ review PR — 40m'
+      ].join('\n')
+    )
+    expect(upsertDayBlock(out, day, sess)).toBe(out)
   })
 
   it('creates the day section when missing and skips tiny sessions', () => {

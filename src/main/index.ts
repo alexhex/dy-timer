@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor, screen, type Rectangle } from 'electron'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { Config, PersistedState } from '../shared/types'
+import type { AutoPauseReason, Config, PersistedState } from '../shared/types'
 import { listDoingTasks, syncDay } from './vault'
 
 const DEFAULT_CONFIG: Config = {
@@ -129,6 +129,13 @@ app.whenReady().then(() => {
     const win = BrowserWindow.fromWebContents(e.sender)
     return win ? setMini(win, on) : false
   })
+  // Sleep / screen lock pause a running timer (the renderer also catches missed events via tick gaps).
+  const autoPause = (reason: AutoPauseReason) => () => {
+    const at = Date.now()
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send('power:pause', { reason, at })
+  }
+  powerMonitor.on('suspend', autoPause('suspend'))
+  powerMonitor.on('lock-screen', autoPause('lock'))
   createWindow()
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow())
 })
