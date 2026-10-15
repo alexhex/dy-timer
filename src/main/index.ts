@@ -7,7 +7,8 @@ import { listDoingTasks, syncDay } from './vault'
 const DEFAULT_CONFIG: Config = {
   vaultPath: '/Users/neil/own_kits/mac-notes-obsidian',
   tasksDir: '40_Tasks',
-  logsDir: '70_Logs'
+  logsDir: '70_Logs',
+  breakRatio: 0.25
 }
 
 // Packaged builds embed build/icon.{icns,ico}; in dev we set it explicitly.
@@ -30,10 +31,11 @@ async function writeJson(name: string, data: unknown) {
   await rename(tmp, file(name))
 }
 
-const getConfig = async (): Promise<Config> => ({
-  ...DEFAULT_CONFIG,
-  ...((await readJson<Partial<Config>>('config.json')) ?? {})
-})
+const getConfig = async (): Promise<Config> => {
+  const c = { ...DEFAULT_CONFIG, ...((await readJson<Partial<Config>>('config.json')) ?? {}) }
+  const r = Number(c.breakRatio)
+  return { ...c, breakRatio: Number.isFinite(r) && r > 0 ? r : DEFAULT_CONFIG.breakRatio }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
