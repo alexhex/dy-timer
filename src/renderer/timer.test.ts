@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { breakTargetMs, endBreak, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
+import { breakTargetMs, elapsedMs, endBreak, initialTimer, pauseAt, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
 
 describe('break accounting', () => {
   const t0 = 1_000_000
@@ -49,5 +49,24 @@ describe('break accounting', () => {
     expect(breakTargetMs(30 * 60_000, 0.1)).toBe(3 * 60_000)
     expect(breakTargetMs(30 * 60_000, 0)).toBe(7.5 * 60_000) // invalid → default
     expect(breakTargetMs(1_000, 0.25)).toBe(1000) // at least one second
+  })
+
+  it('auto-pause stops counting at the given moment and leaves idle / paused timers alone', () => {
+    // focus ran 40 min, then the laptop slept for the night
+    const slept = pauseAt(focus, t0 + 40 * 60_000)
+    expect(slept.phase).toBe('paused')
+    expect(elapsedMs(slept, t0 + 10 * 3600_000)).toBe(40 * 60_000)
+    expect(stopFocus(slept, t0 + 10 * 3600_000).focusMs).toBe(40 * 60_000)
+    // resuming continues from 40 min
+    expect(elapsedMs(pauseResume(slept, t0 + 10 * 3600_000), t0 + 10 * 3600_000 + 60_000)).toBe(41 * 60_000)
+    // already paused: the first pause point wins
+    expect(pauseAt(slept, t0 + 50 * 60_000)).toBe(slept)
+    expect(pauseAt(initialTimer, t0)).toBe(initialTimer)
+    // a moment before the phase started never yields negative time
+    expect(elapsedMs(pauseAt(focus, t0 - 5_000), t0 + 60_000)).toBe(0)
+    // works for breaks too: rest stops accruing while asleep
+    const { next: brk } = stopFocus(focus, t0 + 40 * 60_000)
+    const brkSlept = pauseAt(brk, t0 + 45 * 60_000)
+    expect(endBreak(brkSlept, t0 + 10 * 3600_000).rest?.durationMs).toBe(5 * 60_000)
   })
 })

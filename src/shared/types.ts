@@ -59,7 +59,12 @@ export interface PersistedState {
   timer: TimerState
   sessions: Session[]
   breaks?: BreakRecord[]
+  /** Last time the app saw the clock running (saved every few seconds); used to stop counting while the app was closed. */
+  heartbeatAt?: number
 }
+
+/** Why the timer was paused automatically. */
+export type AutoPauseReason = 'suspend' | 'sleep' | 'closed'
 
 export interface SyncResult {
   ok: boolean
@@ -77,4 +82,6 @@ export interface Api {
   syncDay(ts: number): Promise<SyncResult>
   /** Mini mode: small always-on-top window with only the clock and current task; false restores. Returns the new mode. */
   setMini(on: boolean): Promise<boolean>
+  /** Machine is going to sleep; returns an unsubscribe function. */
+  onAutoPause(cb: (e: { reason: AutoPauseReason; at: number }) => void): () => void
 }
