@@ -39,6 +39,8 @@ export function App() {
   /** saved break ratio (the settings form edits a draft until 保存) */
   const ratioRef = useRef(DEFAULT_BREAK_RATIO)
   const [loaded, setLoaded] = useState(false)
+  const [mini, setMini] = useState(false)
+  const toggleMini = useCallback(async () => setMini(await window.api.setMini(!mini)), [mini])
 
   // Latest state for the interval callback.
   const ref = useRef({ timer, sessions, breaks })
@@ -172,12 +174,26 @@ export function App() {
 
   const selectTask = (name: string) => setTimer((t) => ({ ...t, task: name }))
   const pick = tasks.find((t) => t.name === timer.task)
+  const taskName = pick?.name ?? timer.task
+
+  if (mini)
+    return (
+      <div className={`app mini phase-${active ?? 'idle'} ${timer.phase === 'paused' ? 'paused' : ''}`}>
+        <div className="mini-top">
+          <span className="label">{label}</span>
+          <button className="ghost pin" title="恢复完整窗口" onClick={toggleMini}>⤢</button>
+        </div>
+        <div className="clock">{formatClock(display)}</div>
+        <div className="mini-task" title={taskName}>{taskName || '未选择任务'}</div>
+      </div>
+    )
 
   return (
     <div className={`app phase-${active ?? 'idle'}`}>
       <header className="titlebar">
         <span className="brand">Dynamic Timer</span>
         <span className="chip">{weekKey || '—'}</span>
+        <button className="ghost push" title="缩成小窗并置顶（再点一次恢复）" onClick={toggleMini}>📌 迷你置顶</button>
         <button className="ghost" onClick={() => {
           if (config) setRatioDraft(String(config.breakRatio))
           setShowSettings((v) => !v)
@@ -225,7 +241,7 @@ export function App() {
           </div>
 
           <div className="brief">
-            <div className="brief-task">{(pick?.name ?? timer.task) ||'从左侧选择一个任务'}</div>
+            <div className="brief-task">{taskName || '从左侧选择一个任务'}</div>
             <input
               placeholder="本次专注的交付物…"
               value={timer.deliverable}

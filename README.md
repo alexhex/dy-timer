@@ -5,6 +5,7 @@ Focus timer wired to an Obsidian vault.
 - Pick a task from the **in-progress tasks**: notes in `40_Tasks/` whose `status` frontmatter includes `1 - Doing`.
 - Focus counts **up**; stopping starts a **count-down break of focus time × a ratio** (设置 → 「休息时长 = 专注时长 × 系数」, default 0.25, i.e. 40 min focus → 10 min break), when it reaches zero a chime plays and the break **keeps counting up** (still accumulating rest time) until you press **开始专注**. The next focus never starts on its own; task and deliverable can be changed throughout the break. During the count-down the main button reads **结束休息 · 开始专注** and ends the break early.
 - On every stop, the per-task total time for the day is written to `70_Logs/<YYYY-Www>.md` under that day's `## dd-Mmm-yyyy` heading, inside a managed `<!-- dy-timer:start/end -->` block (text outside it is never touched). Tasks with under 1 minute total that day are not logged. The block also carries the day's total break time (`**休息合计**`), counting only time actually spent resting — paused time is excluded, overtime after the count-down is included, and a break ended early counts only up to that point.
+- **📌 迷你置顶** (title bar) shrinks the window to a small card showing only the clock and the current task, floating above all other windows (on macOS also over full-screen apps). Drag it anywhere; press **⤢** to restore the full window at its previous size and position. The mini card reopens where you last left it.
 
 Stack: Electron + electron-vite + React + TypeScript.
 
