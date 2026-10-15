@@ -5,6 +5,8 @@ export interface Config {
   tasksDir: string
   /** Folder (relative to vault) holding weekly logs, e.g. 2026-W42.md */
   logsDir: string
+  /** Break target = focus time × breakRatio (e.g. 0.25 → a quarter of the focus time) */
+  breakRatio: number
 }
 
 export interface WeekTask {
@@ -41,7 +43,7 @@ export interface TimerState {
   phaseBaseElapsedMs: number
   focusStartedAt: number | null
   breakStartedAt: number | null
-  /** Break target (1/3 of focus); after it the break keeps counting up until focus is started by hand */
+  /** Break target (focus × breakRatio); after it the break keeps counting up until focus is started by hand */
   breakDurationMs: number
   /** the break target has been reached and the chime has played */
   breakOvertime: boolean

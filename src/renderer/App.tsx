@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BreakRecord, Config, PersistedState, Session, TimerState, WeekTask } from '../shared/types'
-import { activePhase, breakRestedMs, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
+import { activePhase, breakRestedMs, DEFAULT_BREAK_RATIO, elapsedMs, endBreak, formatClock, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
 
 async function ding() {
   try {
@@ -35,6 +35,9 @@ export function App() {
   const [message, setMessage] = useState('')
   const [config, setConfig] = useState<Config | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [ratioDraft, setRatioDraft] = useState('')
+  /** saved break ratio (the settings form edits a draft until 保存) */
+  const ratioRef = useRef(DEFAULT_BREAK_RATIO)
   const [loaded, setLoaded] = useState(false)
 
   // Latest state for the interval callback.
@@ -56,7 +59,9 @@ export function App() {
         setSessions(saved.sessions ?? [])
         setBreaks(saved.breaks ?? [])
       }
-      setConfig(await window.api.getConfig())
+      const c = await window.api.getConfig()
+      ratioRef.current = c.breakRatio
+      setConfig(c)
       await loadTasks()
       setLoaded(true)
     })()
@@ -92,7 +97,7 @@ export function App() {
   const doStop = useCallback(() => {
     const t = Date.now()
     const cur = ref.current
-    const { next, focusMs, startedAt } = stopFocus(cur.timer, t)
+    const { next, focusMs, startedAt } = stopFocus(cur.timer, t, ratioRef.current)
     const session: Session = {
       id: `${startedAt}`,
       task: cur.timer.task,
@@ -173,7 +178,10 @@ export function App() {
       <header className="titlebar">
         <span className="brand">Dynamic Timer</span>
         <span className="chip">{weekKey || '—'}</span>
-        <button className="ghost" onClick={() => setShowSettings((v) => !v)}>设置</button>
+        <button className="ghost" onClick={() => {
+          if (config) setRatioDraft(String(config.breakRatio))
+          setShowSettings((v) => !v)
+        }}>设置</button>
       </header>
 
       <main>
@@ -292,9 +300,20 @@ export function App() {
               <input value={config[k]} onChange={(e) => setConfig({ ...config, [k]: e.target.value })} />
             </label>
           ))}
+          <label>
+            休息时长 = 专注时长 × 系数
+            <input type="number" min="0.05" max="2" step="0.05" value={ratioDraft} onChange={(e) => setRatioDraft(e.target.value)} />
+            <span className="hint">
+              {Number(ratioDraft) > 0 ? `例：专注 40 分钟 → 休息 ${formatClock(40 * 60_000 * Number(ratioDraft)).replace(/^00:/, '')}` : '请输入大于 0 的数，如 0.25'}
+            </span>
+          </label>
           <button
             onClick={async () => {
-              setConfig(await window.api.setConfig(config))
+              const r = Number(ratioDraft)
+              const saved = await window.api.setConfig({ ...config, breakRatio: r > 0 ? r : config.breakRatio })
+              ratioRef.current = saved.breakRatio
+              setRatioDraft(String(saved.breakRatio))
+              setConfig(saved)
               await loadTasks()
               setShowSettings(false)
             }}

@@ -24,9 +24,12 @@ export function elapsedMs(s: TimerState, now: number): number {
   return s.phaseBaseElapsedMs + Math.max(0, now - (s.phaseStartedAt ?? now))
 }
 
-/** Break is one third of the focus time, at least one second. */
-export function breakTargetMs(focusMs: number): number {
-  return Math.max(1000, Math.floor(Math.floor(focusMs / 1000) / 3) * 1000)
+export const DEFAULT_BREAK_RATIO = 0.25
+
+/** Break target = focus time × ratio, whole seconds, at least one second. */
+export function breakTargetMs(focusMs: number, ratio = DEFAULT_BREAK_RATIO): number {
+  const r = Number.isFinite(ratio) && ratio > 0 ? ratio : DEFAULT_BREAK_RATIO
+  return Math.max(1000, Math.floor((Math.floor(focusMs / 1000) * r) + 1e-9) * 1000)
 }
 
 export function formatClock(ms: number): string {
@@ -46,7 +49,7 @@ export function pauseResume(s: TimerState, now: number): TimerState {
 }
 
 /** Ends focus and starts the break; the caller records the session. */
-export function stopFocus(s: TimerState, now: number): { next: TimerState; focusMs: number; startedAt: number } {
+export function stopFocus(s: TimerState, now: number, breakRatio = DEFAULT_BREAK_RATIO): { next: TimerState; focusMs: number; startedAt: number } {
   const focusMs = elapsedMs(s, now)
   const startedAt = s.focusStartedAt ?? now - focusMs
   return {
@@ -61,7 +64,7 @@ export function stopFocus(s: TimerState, now: number): { next: TimerState; focus
       focusStartedAt: null,
       breakStartedAt: now,
       lastFocusDurationMs: focusMs,
-      breakDurationMs: breakTargetMs(focusMs),
+      breakDurationMs: breakTargetMs(focusMs, breakRatio),
       breakOvertime: false,
       taskLocked: !s.stopAsDone,
       stopAsDone: false

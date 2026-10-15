@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { endBreak, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
+import { breakTargetMs, endBreak, initialTimer, pauseResume, reachesBreakTarget, startFocus, stopFocus } from './timer'
 
 describe('break accounting', () => {
   const t0 = 1_000_000
   const focus = startFocus({ ...initialTimer, task: 'T', deliverable: 'd' }, t0)
 
   it('records rest time without paused time', () => {
-    // 30 min focus → 10 min break target
-    const { next: brk } = stopFocus(focus, t0 + 30 * 60_000)
+    const { next: brk } = stopFocus(focus, t0 + 30 * 60_000, 1 / 3)
     const b0 = t0 + 30 * 60_000
     let s = pauseResume(brk, b0 + 3 * 60_000) // rest 3 min, then pause
     s = pauseResume(s, b0 + 120 * 60_000) // 2h lunch pause
@@ -19,7 +18,7 @@ describe('break accounting', () => {
 
   it('keeps counting rest after the target until focus starts by hand', () => {
     const b0 = t0 + 30 * 60_000
-    const { next: brk } = stopFocus(focus, b0) // 10 min target
+    const { next: brk } = stopFocus(focus, b0, 1 / 3) // 10 min target
     expect(reachesBreakTarget(brk, b0 + 9 * 60_000)).toBe(false)
     expect(reachesBreakTarget(brk, b0 + 10 * 60_000)).toBe(true)
     const over = { ...brk, breakOvertime: true }
@@ -35,11 +34,20 @@ describe('break accounting', () => {
 
   it('pause during overtime is not counted, and non-break phases record nothing', () => {
     const b0 = t0 + 30 * 60_000
-    const { next: brk } = stopFocus(focus, b0)
+    const { next: brk } = stopFocus(focus, b0, 1 / 3)
     let s = pauseResume({ ...brk }, b0 + 12 * 60_000)
     expect(reachesBreakTarget(s, b0 + 60 * 60_000)).toBe(false)
     s = pauseResume(s, b0 + 60 * 60_000)
     expect(endBreak(s, b0 + 63 * 60_000).rest?.durationMs).toBe(15 * 60_000)
     expect(endBreak(focus, t0 + 5_000).rest).toBeNull()
+  })
+
+  it('break target is focus × ratio, default 0.25', () => {
+    expect(breakTargetMs(40 * 60_000)).toBe(10 * 60_000)
+    expect(stopFocus(focus, t0 + 40 * 60_000).next.breakDurationMs).toBe(10 * 60_000)
+    expect(breakTargetMs(40 * 60_000, 0.5)).toBe(20 * 60_000)
+    expect(breakTargetMs(30 * 60_000, 0.1)).toBe(3 * 60_000)
+    expect(breakTargetMs(30 * 60_000, 0)).toBe(7.5 * 60_000) // invalid → default
+    expect(breakTargetMs(1_000, 0.25)).toBe(1000) // at least one second
   })
 })
