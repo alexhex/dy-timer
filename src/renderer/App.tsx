@@ -214,6 +214,7 @@ export function App() {
   const selectTask = (name: string) => setTimer((t) => ({ ...t, task: name }))
   const pick = tasks.find((t) => t.name === timer.task)
   const taskName = pick?.name ?? timer.task
+  const deliverableName = timer.deliverable.trim()
 
   if (mini)
     return (
@@ -223,7 +224,7 @@ export function App() {
           <button className="ghost pin" title="恢复完整窗口" onClick={toggleMini}>⤢</button>
         </div>
         <div className="clock">{formatClock(display)}</div>
-        <div className="mini-task" title={taskName}>{taskName || '未选择任务'}</div>
+        <div className="mini-task" title={[taskName, deliverableName].filter(Boolean).join(' · ')}>{deliverableName || '未填写交付物'}</div>
       </div>
     )
 
