@@ -211,6 +211,10 @@ export function App() {
   const label = timer.phase === 'paused' ? (active === 'break' ? '休息 · 已暂停' : '专注 · 已暂停') : active === 'break' ? (overtime ? '休息 · 已到时间' : '休息') : '专注'
   const locked = active === 'focus'
 
+  const openTask = async (path: string) => {
+    const r = await window.api.openTask(path)
+    if (!r.ok) setMessage(`无法在 Obsidian 中打开：${r.error}`)
+  }
   const selectTask = (name: string) => setTimer((t) => ({ ...t, task: name }))
   const pick = tasks.find((t) => t.name === timer.task)
   const taskName = pick?.name ?? timer.task
@@ -250,7 +254,7 @@ export function App() {
           {!tasksError && tasks.length === 0 && <p className="muted">没有状态为 “1 - Doing” 的任务。</p>}
           <ul className="task-list">
             {tasks.map((t) => (
-              <li key={t.path}>
+              <li key={t.path} className="task-item">
                 <button
                   className={`task ${t.name === timer.task ? 'selected' : ''}`}
                   disabled={locked}
@@ -260,6 +264,9 @@ export function App() {
                   <span className="task-meta">
                     {t.priority.replace(/^\d - /, '') || '—'}{t.dueDate ? ` · 截止 ${t.dueDate.slice(5)}` : ''}
                   </span>
+                </button>
+                <button className="ghost open-note" title="在 Obsidian 中打开" onClick={() => openTask(t.path)}>
+                  ↗
                 </button>
               </li>
             ))}

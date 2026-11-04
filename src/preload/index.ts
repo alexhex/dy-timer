@@ -5,6 +5,7 @@ const api: Api = {
   getConfig: () => ipcRenderer.invoke('config:get'),
   setConfig: (c) => ipcRenderer.invoke('config:set', c),
   listDoingTasks: () => ipcRenderer.invoke('tasks:doing'),
+  openTask: (path) => ipcRenderer.invoke('task:open', path),
   loadState: () => ipcRenderer.invoke('state:load'),
   saveState: (s) => ipcRenderer.invoke('state:save', s),
   syncDay: (ts) => ipcRenderer.invoke('log:sync', ts),

@@ -76,6 +76,8 @@ export interface Api {
   getConfig(): Promise<Config>
   setConfig(c: Config): Promise<Config>
   listDoingTasks(): Promise<{ weekKey: string; tasks: WeekTask[]; error?: string }>
+  /** Open a task note in Obsidian (via the obsidian:// URL scheme). */
+  openTask(path: string): Promise<{ ok: boolean; error?: string }>
   loadState(): Promise<PersistedState | null>
   saveState(s: PersistedState): Promise<void>
   /** Rewrite the day block of the weekly log for the day of `ts` */

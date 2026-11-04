@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { upsertDayBlock, BLOCK_START } from './log'
 import { isoWeekKey, dayHeading } from './week'
-import { isDoing } from './vault'
+import { isDoing, obsidianOpenUrl } from './vault'
 import type { Session } from '../shared/types'
 
 const at = (h: number, m: number) => new Date(2026, 9, 12, h, m).getTime()
@@ -85,5 +85,19 @@ describe('isDoing', () => {
     expect(isDoing({ status: ['2 - To Do'] })).toBe(false)
     expect(isDoing({ status: ['6 - Done'] })).toBe(false)
     expect(isDoing({})).toBe(false)
+  })
+})
+
+describe('obsidianOpenUrl', () => {
+  const cfg = { vaultPath: '/Users/neil/vault', tasksDir: '40_Tasks', logsDir: '70_Logs', breakRatio: 0.25 }
+  it('encodes the absolute note path', () => {
+    expect(obsidianOpenUrl(cfg, '/Users/neil/vault/40_Tasks/CA Review.md')).toBe(
+      'obsidian://open?path=%2FUsers%2Fneil%2Fvault%2F40_Tasks%2FCA%20Review.md'
+    )
+  })
+  it('refuses files outside the tasks folder', () => {
+    expect(obsidianOpenUrl(cfg, '/Users/neil/vault/70_Logs/2026-W45.md')).toBeNull()
+    expect(obsidianOpenUrl(cfg, '/Users/neil/vault/40_Tasks/../secret.md')).toBeNull()
+    expect(obsidianOpenUrl(cfg, '/etc/passwd')).toBeNull()
   })
 })

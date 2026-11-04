@@ -27,6 +27,11 @@ button.ghost { border: none; background: none; color: var(--muted); padding: 2px
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 button.done.on { border-color: var(--accent); color: var(--accent); }
 .task { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.task-item { position: relative; }
+.task-item .task { padding-right: 30px; }
+.open-note { position: absolute; top: 5px; right: 4px; font-size: 14px; line-height: 1; opacity: .35; transition: opacity .12s; }
+.task-item:hover .open-note, .open-note:focus-visible { opacity: 1; }
+.open-note:hover { color: var(--accent); }
 .task.selected { background: var(--sel); border-color: var(--accent); }
 .task-name { font-weight: 500; overflow-wrap: anywhere; }
 .task-meta, .muted { color: var(--muted); font-size: 12px; }
