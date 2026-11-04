@@ -1,8 +1,8 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, screen, type Rectangle } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor, screen, shell, type Rectangle } from 'electron'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { AutoPauseReason, Config, PersistedState } from '../shared/types'
-import { listDoingTasks, syncDay } from './vault'
+import { listDoingTasks, obsidianOpenUrl, syncDay } from './vault'
 
 const DEFAULT_CONFIG: Config = {
   vaultPath: '/Users/neil/own_kits/mac-notes-obsidian',
@@ -112,6 +112,16 @@ app.whenReady().then(() => {
       return await listDoingTasks(await getConfig())
     } catch (e) {
       return { weekKey: '', tasks: [], error: (e as Error).message }
+    }
+  })
+  ipcMain.handle('task:open', async (_e, path: string) => {
+    const url = obsidianOpenUrl(await getConfig(), path)
+    if (!url) return { ok: false, error: '不在任务目录中的文件' }
+    try {
+      await shell.openExternal(url)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
     }
   })
   ipcMain.handle('state:load', () => readJson<PersistedState>('state.json'))

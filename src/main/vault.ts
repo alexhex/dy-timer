@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, relative, isAbsolute } from 'node:path'
 import { parse } from 'yaml'
 import type { BreakRecord, Config, Session, WeekTask } from '../shared/types'
 import { newLogFile, upsertDayBlock } from './log'
@@ -26,6 +26,16 @@ const asText = (v: unknown): string =>
 export function isDoing(fm: Record<string, unknown>): boolean {
   const st = Array.isArray(fm.status) ? fm.status : [fm.status]
   return st.length === 1 && String(st[0] ?? '').includes('1 - Doing')
+}
+
+/**
+ * obsidian:// link that opens a note by its absolute path; Obsidian finds the vault containing it.
+ * Returns null for anything outside the configured tasks folder, so the renderer can't open arbitrary files.
+ */
+export function obsidianOpenUrl(cfg: Config, notePath: string): string | null {
+  const rel = relative(join(cfg.vaultPath, cfg.tasksDir), notePath)
+  if (!rel || rel.startsWith('..') || isAbsolute(rel) || !notePath.endsWith('.md')) return null
+  return `obsidian://open?path=${encodeURIComponent(notePath)}`
 }
 
 export async function listDoingTasks(cfg: Config, now = new Date()) {
